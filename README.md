@@ -2,7 +2,7 @@
 
 
 ## Overview 
-The movie recommender system works very quickly. You just add the title of a film to the function `get_recommendations_faiss("`**Name of movie**`")` and it will list out the top 10 most similar movies in terms of genre, rating and the number of votes. It works like a charm really. 
+The movie recommender system works very quickly. You just add the title of a film as an argument to `python main.py "Name of Movie"` and it will list out the top 10 most similar movies in terms of genre, rating and the number of votes. It works like a charm really. 
 
 
 ## How to Use 
