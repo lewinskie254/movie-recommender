@@ -82,7 +82,7 @@ def get_recommendations_faiss(title, top_n=10):
     results['match_score'] = [f"{round(s * 100, 2)}%" for s in similarity_scores]
 
     return results.sort_values(by=['averageRating', 'numVotes'], ascending=False)[
-        ['primaryTitle', 'startYear', 'numVotes', 'genres', 'averageRating', 'match_score']
+        ['primaryTitle', 'startYear', 'titleType', 'numVotes', 'genres', 'averageRating', 'match_score']
     ]
 
 
