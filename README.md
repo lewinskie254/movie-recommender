@@ -9,7 +9,8 @@ The movie recommender system works very quickly. You just add the title of a fil
 1. Clone this repo
 2. Create a virtual environment
 3. Install all packages - `pip install requirements.txt`
-4. Run this command `python main.py "name of movie"`. The second argument should be the name of the movie to get similar recommendations. 
+4. Run this command `python main.py "name of movie"`. The second argument should be the name of the movie or television show to get similar recommendations. 
+5. If you don't find the movie in the index, google the movie or series title and paste it. Typos are still not handled in this version but will handled in the next. 
 
 ## Contacts 
 Simply message me on `+254 708 445 839` on whatsapp in case you run into any problems. 
