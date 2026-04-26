@@ -9,8 +9,7 @@ The movie recommender system works very quickly. You just add the title of a fil
 1. Clone this repo
 2. Create a virtual environment
 3. Install all packages - `pip install requirements.txt`
-4. Run all cells 
-5. Afterwards, on the final cell, you can just use the `get_recommendation_faiss` function to inference the system to show you the movies most similar to what you are looking for. Best damn project I have ever made so far. 
+4. Run this command `python main.py "name of movie"`. The second argument should be the name of the movie to get similar recommendations. 
 
 ## Contacts 
 Simply message me on `+254 708 445 839` on whatsapp in case you run into any problems. 
