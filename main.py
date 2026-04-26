@@ -1,19 +1,29 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.metrics.pairwise import linear_kernel
 import joblib
 import faiss
-from sklearn.feature_extraction.text import TfidfTransformer
 import re
+import sys
+import os
 
+# --- PART 1: ASSET LOADING (With Path Safety) ---
+# This ensures the script finds your files even if you run it from a different folder
+base_path = os.path.dirname(os.path.abspath(__file__))
 
-index = faiss.read_index("movie_faiss.index")
-indices_map = joblib.load('indices_map.pkl')
-metadata = joblib.load('metadata.pkl')
+def load_assets():
+    try:
+        idx = faiss.read_index(os.path.join(base_path, "movie_faiss.index"))
+        m_map = joblib.load(os.path.join(base_path, 'indices_map.pkl'))
+        meta = joblib.load(os.path.join(base_path, 'metadata.pkl'))
+        return idx, m_map, meta
+    except Exception as e:
+        print(f"❌ Error: Could not find model files. {e}")
+        sys.exit(1)
 
+# Load them globally so they are ready for the function
+index, indices_map, metadata = load_assets()
+
+# --- PART 2: TITLE CASING LOGIC ---
 def professional_title_case(text):
     lowercase_exceptions = {'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 
                             'if', 'in', 'is', 'nor', 'of', 'on', 'or', 'so', 
@@ -23,72 +33,75 @@ def professional_title_case(text):
         word = match.group(0)
         start_index = match.start()
         
-        # 1. Handle Possessives (e.g., 's in Ocean's)
-        if word.lower() == "'s":
-            return word.lower()
-
-        # 2. Check if this word follows a colon (e.g., Hachi: A Dog's Tale)
-        # We look at the substring before the current word
+        if word.lower() == "'s": return word.lower()
+        
         preceding_text = text[:start_index].rstrip()
         follows_colon = preceding_text.endswith(':')
 
-        # 3. Protect Initials with periods
         if "." in word:
             if word.lower().rstrip('.') == 'vs':
                 return "vs." if (start_index != 0 and not follows_colon) else "Vs."
             return word.upper()
 
-        # 4. Protect All-Caps Acronyms
-        if word.isupper() and len(word) > 1:
-            return word
+        if word.isupper() and len(word) > 1: return word
         
-        # 5. Always capitalize the FIRST word OR word AFTER A COLON
-        if start_index == 0 or follows_colon:
-            return word.capitalize()
+        if start_index == 0 or follows_colon: return word.capitalize()
         
-        # 6. Apply lowercase exceptions
-        if word.lower() in lowercase_exceptions:
-            return word.lower()
+        if word.lower() in lowercase_exceptions: return word.lower()
 
-        # 7. Default to standard Title Case
         return word.capitalize()
 
     return re.sub(r"[\w\.\']+", replace_func, text)
 
+# --- PART 3: RECOMMENDATION LOGIC ---
 def get_recommendations_faiss(title, top_n=10):
-    # 1. Clean and Verify Title
     title = title.strip()
     title = professional_title_case(title)
+    
+    # 1. Check if it exists
     if title not in indices_map:
         return f"Error: '{title}' not found in index."
-
-    # 2. Retrieve the Index Position
+    
+    # 2. ACTUALLY GRAB THE VALUE (This was missing!)
     movie_idx = indices_map[title]
 
-    # FIX: Handle duplicates correctly
-    if isinstance(movie_idx, (pd.Series, np.ndarray)):
-        movie_idx = movie_idx.iloc[0]
-    # If it's just a single integer/number, movie_idx is already what we need!
+    # 3. Handle duplicates (If movie_idx is a Series/List)
+    if isinstance(movie_idx, (pd.Series, pd.Index, np.ndarray)):
+        # Use .iloc[0] for pandas objects, [0] for numpy
+        movie_idx = movie_idx.iloc[0] if hasattr(movie_idx, 'iloc') else movie_idx[0]
     
-    # 3. Reconstruct the Vector
+    # 4. Math and Search
     query_vector = index.reconstruct(int(movie_idx)).reshape(1, -1)
-
-    # 4. Search
     D, I = index.search(query_vector, top_n + 1)
 
-    # 5. Process
+    # 5. Build Results
     recommended_indices = I[0][1:]
     similarity_scores = D[0][1:]
 
-    # 6. Build and Sort Results
     results = metadata.iloc[recommended_indices].copy()
-    results['match_score_raw'] = similarity_scores # Keep numeric for sorting
     results['match_score'] = [f"{round(s * 100, 2)}%" for s in similarity_scores]
 
-    # Use sort_values instead of orderBy
-    return results.sort_values(by=['averageRating', 'startYear', 'numVotes', 'titleType'], ascending=False)[
-        ['primaryTitle', 'startYear', 'numVotes', 'genres', 'titleType', 'averageRating', 'match_score']
+    return results.sort_values(by=['averageRating', 'numVotes'], ascending=False)[
+        ['primaryTitle', 'startYear', 'numVotes', 'genres', 'averageRating', 'match_score']
     ]
 
 
-print(get_recommendations_faiss("hell or high water", 20))
+
+# --- PART 4: EXECUTION ---
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("\nUsage: python main.py \"Movie Name\"")
+        sys.exit(1)
+
+    input_title = " ".join(sys.argv[1:])
+    print(f"\n🔍 Searching for: '{input_title}'...")
+    
+    output = get_recommendations_faiss(input_title)
+
+    if isinstance(output, str):
+        print(output)
+    else:
+        print("\n--- Top Recommendations ---")
+        # Replace the print line in your main block with this:
+        print(output.to_json(orient='records', indent=4))        
+        print("\n")
