@@ -6,8 +6,7 @@ import re
 import sys
 import os
 
-# --- PART 1: ASSET LOADING (With Path Safety) ---
-# This ensures the script finds your files even if you run it from a different folder
+# --- PART 1: ASSET LOADING ---
 base_path = os.path.dirname(os.path.abspath(__file__))
 
 def load_assets():
@@ -20,7 +19,7 @@ def load_assets():
         print(f"❌ Error: Could not find model files. {e}")
         sys.exit(1)
 
-# Load them globally so they are ready for the function
+# Load assets globally so they are ready for the function
 index, indices_map, metadata = load_assets()
 
 # --- PART 2: TITLE CASING LOGIC ---
@@ -67,7 +66,6 @@ def get_recommendations_faiss(title, top_n=10):
 
     # 3. Handle duplicates (If movie_idx is a Series/List)
     if isinstance(movie_idx, (pd.Series, pd.Index, np.ndarray)):
-        # Use .iloc[0] for pandas objects, [0] for numpy
         movie_idx = movie_idx.iloc[0] if hasattr(movie_idx, 'iloc') else movie_idx[0]
     
     # 4. Math and Search
